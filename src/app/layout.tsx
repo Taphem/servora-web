@@ -6,6 +6,7 @@ import { AnchorScrollHandler } from "@/components/layout/AnchorScrollHandler";
 import { ToastProvider } from "@/components/ui/Toast";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { env } from "@/lib/env";
 import "./globals.css";
 
 const inter = Inter({
@@ -21,7 +22,7 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
-const siteUrl = "https://servora.hemandu.com";
+const siteUrl = env.siteUrl;
 const title = "Servora — Find the right service. Right when you need it.";
 const description =
   "Discover trusted local professionals, compare your options, and book in minutes.";
