@@ -1,26 +1,242 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   SERVORA DESIGN SYSTEM
+   Design tokens live here as CSS custom properties and are exposed to
+   Tailwind utilities via @theme. Components should consume tokens
+   (bg-surface, text-ink-700, shadow-card, etc.) rather than raw values.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ---- Ink (neutral) scale — warm-tinted near-black to white ---- */
+  --color-ink-950: #0b0d10;
+  --color-ink-900: #12151a;
+  --color-ink-800: #1c2128;
+  --color-ink-700: #2b323c;
+  --color-ink-600: #454e5a;
+  --color-ink-500: #626b77;
+  --color-ink-400: #88919b;
+  --color-ink-300: #b3bac2;
+  --color-ink-200: #dadee2;
+  --color-ink-100: #eceef0;
+  --color-ink-50: #f5f6f7;
+
+  /* ---- Brand — deep emerald-teal, precise and trustworthy ---- */
+  --color-brand-950: #06261f;
+  --color-brand-900: #0a3a30;
+  --color-brand-800: #0e4f41;
+  --color-brand-700: #126352;
+  --color-brand-600: #157a65;
+  --color-brand-500: #1c9c82;
+  --color-brand-400: #3fb69c;
+  --color-brand-300: #7ecfbb;
+  --color-brand-200: #b8e5d9;
+  --color-brand-100: #ddf3ec;
+  --color-brand-50: #f1faf7;
+
+  /* ---- Accent — warm amber for ratings / highlights, used sparingly ---- */
+  --color-accent-600: #a9701a;
+  --color-accent-500: #cf8c22;
+  --color-accent-400: #e2a83b;
+  --color-accent-300: #edc27a;
+  --color-accent-100: #fbf0dc;
+
+  /* ---- Signal colors ---- */
+  --color-success-500: #1c9c6b;
+  --color-success-100: #e2f6ec;
+  --color-danger-500: #c74133;
+  --color-danger-100: #fbe9e7;
+  --color-warning-500: #cf8c22;
+  --color-warning-100: #fbf0dc;
+
+  /* ---- Surfaces ---- */
+  --color-surface: #fdfcfa;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f5f4f1;
+  --color-surface-inverse: #0f1115;
+
+  /* ---- Text ---- */
+  --color-text-primary: var(--color-ink-900);
+  --color-text-secondary: var(--color-ink-600);
+  --color-text-tertiary: var(--color-ink-400);
+  --color-text-inverse: #f5f6f7;
+  --color-text-brand: var(--color-brand-700);
+
+  /* ---- Borders ---- */
+  --color-border-subtle: #eceae4;
+  --color-border-default: #e2e0d8;
+  --color-border-strong: #c9c6bb;
+  --color-border-inverse: rgba(245, 246, 247, 0.14);
+
+  /* ---- Radius scale ---- */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 999px;
+
+  /* ---- Shadow scale — soft, low elevation, no heavy drop shadows ---- */
+  --shadow-xs: 0 1px 2px rgba(15, 17, 21, 0.04);
+  --shadow-sm: 0 2px 8px rgba(15, 17, 21, 0.05), 0 1px 2px rgba(15, 17, 21, 0.04);
+  --shadow-md: 0 8px 24px rgba(15, 17, 21, 0.07), 0 2px 6px rgba(15, 17, 21, 0.04);
+  --shadow-lg: 0 20px 48px rgba(15, 17, 21, 0.10), 0 4px 12px rgba(15, 17, 21, 0.05);
+  --shadow-glow-brand: 0 0 0 1px rgba(28, 156, 130, 0.16), 0 12px 32px rgba(28, 156, 130, 0.14);
+
+  /* ---- Spacing (supplement to Tailwind default scale) ---- */
+  --space-section-y: clamp(4rem, 8vw, 8rem);
+  --space-section-y-sm: clamp(3rem, 6vw, 5.5rem);
+
+  /* ---- Motion tokens ---- */
+  --ease-out-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-premium: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 450ms;
+  --duration-slower: 700ms;
+
+  /* ---- Z-index conventions ---- */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 40;
+  --z-nav: 50;
+  --z-overlay: 90;
+  --z-drawer: 100;
+  --z-modal: 110;
+  --z-toast: 120;
+  --z-tooltip: 130;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink-950: var(--color-ink-950);
+  --color-ink-900: var(--color-ink-900);
+  --color-ink-800: var(--color-ink-800);
+  --color-ink-700: var(--color-ink-700);
+  --color-ink-600: var(--color-ink-600);
+  --color-ink-500: var(--color-ink-500);
+  --color-ink-400: var(--color-ink-400);
+  --color-ink-300: var(--color-ink-300);
+  --color-ink-200: var(--color-ink-200);
+  --color-ink-100: var(--color-ink-100);
+  --color-ink-50: var(--color-ink-50);
+
+  --color-brand-950: var(--color-brand-950);
+  --color-brand-900: var(--color-brand-900);
+  --color-brand-800: var(--color-brand-800);
+  --color-brand-700: var(--color-brand-700);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-300: var(--color-brand-300);
+  --color-brand-200: var(--color-brand-200);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-50: var(--color-brand-50);
+
+  --color-accent-600: var(--color-accent-600);
+  --color-accent-500: var(--color-accent-500);
+  --color-accent-400: var(--color-accent-400);
+  --color-accent-300: var(--color-accent-300);
+  --color-accent-100: var(--color-accent-100);
+
+  --color-success-500: var(--color-success-500);
+  --color-success-100: var(--color-success-100);
+  --color-danger-500: var(--color-danger-500);
+  --color-danger-100: var(--color-danger-100);
+  --color-warning-500: var(--color-warning-500);
+  --color-warning-100: var(--color-warning-100);
+
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-sunken: var(--color-surface-sunken);
+  --color-surface-inverse: var(--color-surface-inverse);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-tertiary: var(--color-text-tertiary);
+  --color-text-inverse: var(--color-text-inverse);
+  --color-text-brand: var(--color-text-brand);
+
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-default: var(--color-border-default);
+  --color-border-strong: var(--color-border-strong);
+  --color-border-inverse: var(--color-border-inverse);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-glow-brand: var(--shadow-glow-brand);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Servora customer web intentionally ships light-mode-only for now;
+     dark tokens are reserved for a future theming pass. */
+}
+
+* {
+  border-color: var(--color-border-default);
+}
+
+html {
+  scroll-behavior: auto;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+/* Visible, consistent focus ring across the app */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.container-servora {
+  width: 100%;
+  max-width: 1360px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .container-servora {
+    padding-inline: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-servora {
+    padding-inline: 2.5rem;
+  }
 }
