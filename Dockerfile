@@ -3,10 +3,12 @@
 # Servora Web — production container image.
 #
 # Three stages: install dependencies once, build the app, then copy only
-# the Next.js "standalone" output (see `output: "standalone"` in
-# next.config.ts) into a clean runtime image. The final image contains no
-# source, no dev dependencies, and no build tooling — just the compiled
-# server and the static assets it serves.
+# the Next.js "standalone" output into a clean runtime image. Standalone
+# output is conditional in next.config.ts (BUILD_STANDALONE=true, set
+# below) — it must stay off for Vercel builds, which use this same
+# next.config.ts but do their own output tracing. The final image
+# contains no source, no dev dependencies, and no build tooling — just
+# the compiled server and the static assets it serves.
 #
 # Build:  docker build -t servora-web .
 # Run:    docker run --rm -p 3000:3000 servora-web
@@ -39,6 +41,10 @@ COPY . .
 ARG NEXT_PUBLIC_SITE_URL=https://servora.hemandu.com
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Explicit opt-in to `output: "standalone"` in next.config.ts — see the
+# comment there. Vercel builds must NOT set this; only Docker does.
+ENV BUILD_STANDALONE=true
 RUN npm run build
 
 # ---------------------------------------------------------------------------

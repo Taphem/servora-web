@@ -34,10 +34,11 @@ change. See [Future API boundary](#future-api-boundary) below.
 
 ## Requirements
 
-- **Node.js 24** (LTS) — see [`.nvmrc`](.nvmrc). The app itself only
-  requires Next.js's own minimum (Node ≥ 20.9), but local dev, Docker and CI
-  are all pinned to the same major version so nothing behaves differently
-  between them. With [nvm](https://github.com/nvm-sh/nvm): `nvm use`.
+- **Node.js 24** (LTS) — the version this repo has standardized on, kept
+  aligned everywhere it matters: [`.nvmrc`](.nvmrc), `package.json`'s
+  `engines.node` (`24.x`), the `Dockerfile`'s base image, GitHub Actions,
+  and Vercel's Node.js version project setting (which reads `engines.node`).
+  With [nvm](https://github.com/nvm-sh/nvm): `nvm use`.
 - **npm** (ships with Node) — `package-lock.json` is committed, so every
   install (`npm ci`, Docker, CI) resolves the exact same dependency tree.
 
@@ -80,12 +81,22 @@ npm run build
 npm run start
 ```
 
-`next build` (see [`next.config.ts`](next.config.ts)) is configured with
-`output: "standalone"`, which produces a self-contained
-`.next/standalone/server.js` bundling only the `node_modules` the app
-actually uses at runtime — Vercel ignores this setting in favor of its own
-bundling, so it's safe for both targets. `npm run start` serves the regular
-build; the standalone server is what the Docker image below runs directly.
+This is the standard Next.js build — the one Vercel also runs. `npm run
+start` serves it directly.
+
+Next.js also supports `output: "standalone"`, which produces a
+self-contained `.next/standalone/server.js` bundling only the
+`node_modules` the app actually uses at runtime. That mode is **not** the
+default here: Vercel's build pipeline does its own output tracing and
+post-build processing, and enabling standalone output unconditionally
+breaks it (`ENOENT: .next/next-server.js.nft.json` after an otherwise
+successful build — standalone mode restructures the output in a way
+Vercel's post-build step doesn't expect).
+
+`next.config.ts` only enables `output: "standalone"` when
+`BUILD_STANDALONE=true` is set at build time — nothing sets that except the
+Dockerfile, so `npm run build` here and on Vercel both produce the regular
+build, and Docker builds (below) opt into standalone explicitly.
 
 ## Docker
 

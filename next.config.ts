@@ -1,11 +1,22 @@
 import type { NextConfig } from "next";
 
+// `output: "standalone"` produces a self-contained `.next/standalone`
+// build (app + only the node_modules it actually needs) — exactly what
+// the Dockerfile's runtime stage copies in, so the image doesn't have to
+// ship the full node_modules tree. It must NOT be set for Vercel builds:
+// Vercel's own build pipeline does its own output tracing and post-build
+// processing, which standalone mode's restructured output is incompatible
+// with (it fails after static generation with
+// `ENOENT: .next/next-server.js.nft.json` — a file the standard build
+// produces but standalone mode doesn't). Rather than sniff Vercel's own
+// `VERCEL`/`VERCEL_ENV` variables (fragile — Vercel could change how it
+// signals this), the Dockerfile explicitly opts in with its own
+// `BUILD_STANDALONE=true`. Any other build (Vercel included) gets the
+// standard Next.js output.
+const useStandaloneOutput = process.env.BUILD_STANDALONE === "true";
+
 const nextConfig: NextConfig = {
-  // Produces a self-contained `.next/standalone` build (app + only the
-  // node_modules it actually needs) so the Docker image doesn't have to
-  // ship the full node_modules tree. Vercel ignores this in favor of its
-  // own bundling, so it's safe to leave on for both targets.
-  output: "standalone",
+  ...(useStandaloneOutput ? { output: "standalone" as const } : {}),
 
   images: {
     // Brand assets (src/lib/brand.ts) are trusted, repo-authored SVGs —
