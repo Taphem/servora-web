@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { Drawer } from "@/components/ui/Drawer";
 import { primaryNavLinks } from "@/data/nav";
 import { useScrolled } from "@/hooks/useScrolled";
@@ -52,14 +53,12 @@ export function Navbar() {
           </Button>
         </div>
 
-        <button
-          type="button"
+        <IconButton
+          icon={<Menu size={22} aria-hidden />}
           onClick={() => setDrawerOpen(true)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-900 transition-colors hover:bg-ink-900/[0.06] lg:hidden"
           aria-label="Open menu"
-        >
-          <Menu size={22} aria-hidden />
-        </button>
+          className="lg:hidden"
+        />
       </Container>
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="Menu">

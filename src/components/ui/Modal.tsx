@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { cn } from "@/lib/utils";
 
 interface ModalProps {
@@ -16,6 +18,9 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children, className }: ModalProps) {
   const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -46,15 +51,17 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             aria-hidden="true"
           />
           <motion.div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
+            tabIndex={-1}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className={cn(
-              "relative w-full max-w-lg rounded-t-xl border border-border-default bg-surface-raised p-6 shadow-lg sm:rounded-xl",
+              "relative w-full max-w-lg rounded-t-xl border border-border-default bg-surface-raised p-6 shadow-lg outline-none sm:rounded-xl",
               className,
             )}
           >
@@ -62,14 +69,12 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
               <h2 id={titleId} className="font-display text-xl font-medium text-ink-900">
                 {title}
               </h2>
-              <button
-                type="button"
+              <IconButton
+                icon={<X size={20} aria-hidden />}
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="rounded-full p-1.5 text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-900"
-              >
-                <X size={20} aria-hidden />
-              </button>
+                size="sm"
+              />
             </div>
             {children}
           </motion.div>

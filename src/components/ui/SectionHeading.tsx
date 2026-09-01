@@ -46,7 +46,7 @@ export function SectionHeading({
       ) : null}
       <h2
         className={cn(
-          "font-display text-[clamp(1.75rem,4vw,2.75rem)] font-medium leading-[1.1] tracking-tight",
+          "font-display text-h2",
           tone === "inverse" ? "text-white" : "text-ink-900",
           titleClassName,
         )}

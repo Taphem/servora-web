@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface DrawerProps {
   open: boolean;
@@ -14,6 +16,9 @@ interface DrawerProps {
 
 export function Drawer({ open, onClose, title, children }: DrawerProps) {
   const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(panelRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -44,27 +49,27 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
             aria-hidden="true"
           />
           <motion.div
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
+            tabIndex={-1}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-surface-raised p-6 shadow-lg"
+            className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-surface-raised p-6 shadow-lg outline-none"
           >
             <div className="mb-6 flex items-center justify-between">
               <span id={titleId} className="font-display text-lg font-medium text-ink-900">
                 {title}
               </span>
-              <button
-                type="button"
+              <IconButton
+                icon={<X size={20} aria-hidden />}
                 onClick={onClose}
                 aria-label="Close menu"
-                className="rounded-full p-2 text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-900"
-              >
-                <X size={20} aria-hidden />
-              </button>
+                size="sm"
+              />
             </div>
             {children}
           </motion.div>

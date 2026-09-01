@@ -1,4 +1,5 @@
 import { Container } from "@/components/ui/Container";
+import { Divider } from "@/components/ui/Divider";
 import { Logo } from "@/components/ui/Logo";
 import { footerNav } from "@/data/nav";
 
@@ -46,8 +47,11 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 border-t border-white/10 pt-8 text-sm text-ink-500">
-          <p>&copy; {new Date().getFullYear()} Servora. All rights reserved.</p>
+        <div className="mt-14">
+          <Divider className="border-white/10" />
+          <p className="mt-8 text-sm text-ink-500">
+            &copy; {new Date().getFullYear()} Servora. All rights reserved.
+          </p>
         </div>
       </Container>
     </footer>

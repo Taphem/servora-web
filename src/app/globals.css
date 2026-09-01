@@ -44,16 +44,24 @@
   /* ---- Signal colors ---- */
   --color-success-500: #1c9c6b;
   --color-success-100: #e2f6ec;
+  --color-danger-600: #a8352a;
   --color-danger-500: #c74133;
   --color-danger-100: #fbe9e7;
   --color-warning-500: #cf8c22;
   --color-warning-100: #fbf0dc;
+
+  /* ---- Informational — calm slate-blue, distinct from brand/accent/danger ---- */
+  --color-info-600: #2f4f8f;
+  --color-info-500: #3d63b8;
+  --color-info-100: #e8edfa;
 
   /* ---- Surfaces ---- */
   --color-surface: #fdfcfa;
   --color-surface-raised: #ffffff;
   --color-surface-sunken: #f5f4f1;
   --color-surface-inverse: #0f1115;
+  /** Alias: card/panel content that sits visually above the page surface. */
+  --color-surface-elevated: var(--color-surface-raised);
 
   /* ---- Text ---- */
   --color-text-primary: var(--color-ink-900);
@@ -61,12 +69,24 @@
   --color-text-tertiary: var(--color-ink-400);
   --color-text-inverse: #f5f6f7;
   --color-text-brand: var(--color-brand-700);
+  /** Alias of text-tertiary — least prominent text (hints, meta, captions). */
+  --color-text-muted: var(--color-text-tertiary);
 
   /* ---- Borders ---- */
   --color-border-subtle: #eceae4;
   --color-border-default: #e2e0d8;
   --color-border-strong: #c9c6bb;
   --color-border-inverse: rgba(245, 246, 247, 0.14);
+
+  /* ---- Semantic action aliases ----
+     The brand-* scale above is the raw palette; these are the names
+     components should reach for so the "primary action" color can be
+     retuned in one place without touching every button/link. */
+  --color-primary: var(--color-brand-600);
+  --color-primary-hover: var(--color-brand-700);
+  --color-primary-soft: var(--color-brand-50);
+  --color-error: var(--color-danger-500);
+  --color-error-soft: var(--color-danger-100);
 
   /* ---- Radius scale ---- */
   --radius-xs: 6px;
@@ -83,17 +103,71 @@
   --shadow-lg: 0 20px 48px rgba(15, 17, 21, 0.10), 0 4px 12px rgba(15, 17, 21, 0.05);
   --shadow-glow-brand: 0 0 0 1px rgba(28, 156, 130, 0.16), 0 12px 32px rgba(28, 156, 130, 0.14);
 
+  /* ---- Typography scale ----
+     Named editorial sizes, each a font-size paired with its own
+     line-height (and letter-spacing where it matters at large sizes).
+     Prefer these over ad-hoc clamp()s so every headline in the app
+     shares the same rhythm. Tailwind's default text-xs…text-6xl scale
+     is still available underneath for anything that isn't editorial
+     copy (badges, numeric UI, etc). */
+  --text-display: clamp(2.75rem, 5.5vw, 4.5rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.01em;
+  --text-display--font-weight: 500;
+
+  --text-h1: clamp(2.25rem, 4.5vw, 3.25rem);
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -0.01em;
+  --text-h1--font-weight: 500;
+
+  --text-h2: clamp(1.75rem, 3.5vw, 2.75rem);
+  --text-h2--line-height: 1.15;
+  --text-h2--font-weight: 500;
+
+  --text-h3: clamp(1.375rem, 2.2vw, 1.75rem);
+  --text-h3--line-height: 1.25;
+  --text-h3--font-weight: 500;
+
+  --text-h4: 1.25rem;
+  --text-h4--line-height: 1.35;
+  --text-h4--font-weight: 500;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-body--font-weight: 400;
+
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-small--font-weight: 400;
+
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.08em;
+  --text-label--font-weight: 600;
+
+  --text-caption: 0.6875rem;
+  --text-caption--line-height: 1.4;
+  --text-caption--font-weight: 400;
+
   /* ---- Spacing (supplement to Tailwind default scale) ---- */
   --space-section-y: clamp(4rem, 8vw, 8rem);
   --space-section-y-sm: clamp(3rem, 6vw, 5.5rem);
 
-  /* ---- Motion tokens ---- */
+  /* ---- Motion tokens ----
+     Raw scale (fast/base/slow/slower) plus semantic aliases for how a
+     duration is being used — components should reach for the semantic
+     name (e.g. --duration-hover) so the raw scale can be retuned once. */
   --ease-out-premium: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-premium: cubic-bezier(0.65, 0, 0.35, 1);
   --duration-fast: 150ms;
   --duration-base: 250ms;
   --duration-slow: 450ms;
   --duration-slower: 700ms;
+
+  --duration-hover: var(--duration-fast);
+  --duration-normal: var(--duration-base);
+  --duration-entrance: var(--duration-slow);
+  --duration-exit: var(--duration-fast);
 
   /* ---- Z-index conventions ---- */
   --z-base: 0;
@@ -140,26 +214,38 @@
 
   --color-success-500: var(--color-success-500);
   --color-success-100: var(--color-success-100);
+  --color-danger-600: var(--color-danger-600);
   --color-danger-500: var(--color-danger-500);
   --color-danger-100: var(--color-danger-100);
   --color-warning-500: var(--color-warning-500);
   --color-warning-100: var(--color-warning-100);
+  --color-info-600: var(--color-info-600);
+  --color-info-500: var(--color-info-500);
+  --color-info-100: var(--color-info-100);
 
   --color-surface: var(--color-surface);
   --color-surface-raised: var(--color-surface-raised);
   --color-surface-sunken: var(--color-surface-sunken);
   --color-surface-inverse: var(--color-surface-inverse);
+  --color-surface-elevated: var(--color-surface-elevated);
 
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-tertiary: var(--color-text-tertiary);
   --color-text-inverse: var(--color-text-inverse);
   --color-text-brand: var(--color-text-brand);
+  --color-text-muted: var(--color-text-muted);
 
   --color-border-subtle: var(--color-border-subtle);
   --color-border-default: var(--color-border-default);
   --color-border-strong: var(--color-border-strong);
   --color-border-inverse: var(--color-border-inverse);
+
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-error: var(--color-error);
+  --color-error-soft: var(--color-error-soft);
 
   --radius-xs: var(--radius-xs);
   --radius-sm: var(--radius-sm);
@@ -176,6 +262,45 @@
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  --text-display: var(--text-display);
+  --text-display--line-height: var(--text-display--line-height);
+  --text-display--letter-spacing: var(--text-display--letter-spacing);
+  --text-display--font-weight: var(--text-display--font-weight);
+
+  --text-h1: var(--text-h1);
+  --text-h1--line-height: var(--text-h1--line-height);
+  --text-h1--letter-spacing: var(--text-h1--letter-spacing);
+  --text-h1--font-weight: var(--text-h1--font-weight);
+
+  --text-h2: var(--text-h2);
+  --text-h2--line-height: var(--text-h2--line-height);
+  --text-h2--font-weight: var(--text-h2--font-weight);
+
+  --text-h3: var(--text-h3);
+  --text-h3--line-height: var(--text-h3--line-height);
+  --text-h3--font-weight: var(--text-h3--font-weight);
+
+  --text-h4: var(--text-h4);
+  --text-h4--line-height: var(--text-h4--line-height);
+  --text-h4--font-weight: var(--text-h4--font-weight);
+
+  --text-body: var(--text-body);
+  --text-body--line-height: var(--text-body--line-height);
+  --text-body--font-weight: var(--text-body--font-weight);
+
+  --text-small: var(--text-small);
+  --text-small--line-height: var(--text-small--line-height);
+  --text-small--font-weight: var(--text-small--font-weight);
+
+  --text-label: var(--text-label);
+  --text-label--line-height: var(--text-label--line-height);
+  --text-label--letter-spacing: var(--text-label--letter-spacing);
+  --text-label--font-weight: var(--text-label--font-weight);
+
+  --text-caption: var(--text-caption);
+  --text-caption--line-height: var(--text-caption--line-height);
+  --text-caption--font-weight: var(--text-caption--font-weight);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -183,42 +308,58 @@
      dark tokens are reserved for a future theming pass. */
 }
 
-* {
-  border-color: var(--color-border-default);
-}
+/*
+ * These base resets live in Tailwind's own `base` cascade layer (rather
+ * than as unlayered rules) specifically so that Tailwind utility classes
+ * — which are generated into the `utilities` layer — can still override
+ * them. Unlayered CSS beats every layered rule regardless of specificity,
+ * so an unlayered `* { border-color }` would silently defeat every
+ * `border-{color}` utility in the app (this bit us once already).
+ */
+@layer base {
+  * {
+    border-color: var(--color-border-default);
+  }
 
-html {
-  scroll-behavior: auto;
-}
+  html {
+    scroll-behavior: auto;
+  }
 
-body {
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
+  body {
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
 
-::selection {
-  background: var(--color-brand-200);
-  color: var(--color-brand-900);
-}
+  ::selection {
+    background: var(--color-brand-200);
+    color: var(--color-brand-900);
+  }
 
-/* Visible, consistent focus ring across the app */
-:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
-  border-radius: var(--radius-xs);
+  /* Visible, consistent focus ring across the app */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *:not([data-motion-exempt]),
+  *:not([data-motion-exempt])::before,
+  *:not([data-motion-exempt])::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Functional loading indicators keep spinning — slower, so it still
+     reads as "working" without the fast motion reduced-motion opts out of. */
+  [data-motion-exempt] {
+    animation-duration: 1.6s !important;
   }
 }
 

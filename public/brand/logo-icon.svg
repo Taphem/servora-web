@@ -1,6 +1,7 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Servora</title>
   <defs>
-    <linearGradient id="servora-favicon-gradient" x1="16" y1="4" x2="16" y2="28" gradientUnits="userSpaceOnUse">
+    <linearGradient id="servora-icon-gradient" x1="16" y1="4" x2="16" y2="28" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#b8e5d9" />
       <stop offset="1" stop-color="#3fb69c" />
     </linearGradient>
@@ -15,7 +16,7 @@
        C21.5 22.5 19 24.5 16 24.5
        C13 24.5 10.5 22.8 10.5 20"
     fill="none"
-    stroke="url(#servora-favicon-gradient)"
+    stroke="url(#servora-icon-gradient)"
     stroke-width="4"
     stroke-linecap="round"
   />

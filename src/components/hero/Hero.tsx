@@ -23,7 +23,7 @@ export function Hero() {
         >
           <motion.h1
             variants={staggerItem}
-            className="font-display text-[clamp(2.5rem,6vw,4.25rem)] font-medium leading-[1.05] tracking-tight text-ink-900"
+            className="font-display text-display text-ink-900"
           >
             Find the right service.
             <br />
