@@ -9,11 +9,17 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Drawer } from "@/components/ui/Drawer";
 import { primaryNavLinks } from "@/data/nav";
 import { useScrolled } from "@/hooks/useScrolled";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useAuthModal } from "@/components/auth/AuthModalProvider";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const scrolled = useScrolled(16);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user, status, signOut } = useAuth();
+  const { openLogin, openSignup } = useAuthModal();
+
+  const isAuthenticated = status === "authenticated" && user !== null;
 
   return (
     <header
@@ -45,12 +51,25 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Button variant="ghost" size="sm">
-            Log in
-          </Button>
-          <Button variant="primary" size="sm">
-            Get started
-          </Button>
+          {isAuthenticated ? (
+            <>
+              <span className="max-w-[12rem] truncate px-2 text-sm text-ink-600" title={user.email}>
+                {user.email}
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => void signOut()}>
+                Log out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={openLogin}>
+                Log in
+              </Button>
+              <Button variant="primary" size="sm" onClick={openSignup}>
+                Get started
+              </Button>
+            </>
+          )}
         </div>
 
         <IconButton
@@ -75,12 +94,44 @@ export function Navbar() {
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-3 pt-8">
-          <Button variant="secondary" size="md">
-            Log in
-          </Button>
-          <Button variant="primary" size="md">
-            Get started
-          </Button>
+          {isAuthenticated ? (
+            <>
+              <p className="truncate px-1 text-sm text-ink-600">{user.email}</p>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  void signOut();
+                }}
+              >
+                Log out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  openLogin();
+                }}
+              >
+                Log in
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  openSignup();
+                }}
+              >
+                Get started
+              </Button>
+            </>
+          )}
         </div>
       </Drawer>
     </header>

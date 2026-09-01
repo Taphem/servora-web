@@ -6,6 +6,8 @@ import { AnchorScrollHandler } from "@/components/layout/AnchorScrollHandler";
 import { ToastProvider } from "@/components/ui/Toast";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { AuthModalProvider } from "@/components/auth/AuthModalProvider";
 import { env } from "@/lib/env";
 import "./globals.css";
 
@@ -55,12 +57,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MotionConfig reducedMotion="user">
           <SmoothScrollProvider>
             <ToastProvider>
-              <AnchorScrollHandler />
-              <Navbar />
-              <main id="top" className="flex-1">
-                {children}
-              </main>
-              <Footer />
+              <AuthProvider>
+                <AuthModalProvider>
+                  <AnchorScrollHandler />
+                  <Navbar />
+                  <main id="top" className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                </AuthModalProvider>
+              </AuthProvider>
             </ToastProvider>
           </SmoothScrollProvider>
         </MotionConfig>

@@ -8,18 +8,22 @@ visits at `servora.hemandu.com`.
 ## What this repository is — and isn't
 
 This is a **standalone frontend application**, not a monorepo and not a
-full-stack project. It contains no backend, no database, no authentication
-service, and no payment integration. Everything it renders today comes from
-typed mock data checked into this repo (`src/data`), read through a small
-service-layer abstraction (`src/lib/api`) shaped like the eventual real API.
+full-stack project. It contains no backend, no database, and no payment
+integration of its own — those live in Servora's other repositories and are
+reached only as **external systems, over documented HTTP APIs**, never by
+assuming another service's source code, database, or internals exist
+locally.
 
-Future Servora backend services (Auth, Booking, Payments, Search, AI,
-Notifications) live in their own repositories and are reached from here only
-as **external systems, over documented HTTP APIs and events** — this app
-never assumes another service's source code, database, or internals exist
-locally. Wiring this frontend to a real API Gateway later means replacing
-the bodies of the functions in `src/lib/api`; no component should need to
-change. See [Future API boundary](#future-api-boundary) below.
+This app talks to the real backend for exactly one thing today:
+**authentication** (`src/lib/auth`), through the deployed API Gateway. Every
+other feature — marketplace browsing, provider cards, booking, search — is
+still typed mock data checked into this repo (`src/data`), read through a
+separate, deliberately-mock service-layer abstraction (`src/lib/api`) shaped
+like the eventual real API. The two layers are kept apart on purpose: `src/lib/api`
+returns fixtures and always will until a Booking/Search/etc. service exists to
+call; `src/lib/auth` makes real network requests against a real, deployed
+service today. See [Authentication](#authentication) and
+[Future API boundary](#future-api-boundary) below.
 
 ## Stack
 
@@ -54,8 +58,10 @@ Open [http://localhost:3000](http://localhost:3000).
 ```bash
 npm run lint        # ESLint
 npm run typecheck   # tsc --noEmit
-npm run build        # production build
-npm run start         # serve the production build (run build first)
+npm run test         # Vitest, single run
+npm run test:watch    # Vitest, watch mode
+npm run build          # production build
+npm run start            # serve the production build (run build first)
 ```
 
 ## Environment variables
@@ -67,12 +73,23 @@ See [`.env.example`](.env.example) for the full documented list. Copy it to
 cp .env.example .env.local
 ```
 
-Every variable has a safe default (`src/lib/env.ts`) — **the app runs with
-zero configuration**, entirely on local mock data. Only
-`NEXT_PUBLIC_`-prefixed variables belong in this file; Next.js inlines those
-into the browser bundle at build time, so nothing secret can ever go behind
-that prefix. `.env`, `.env.local` and friends are gitignored and must never
-be committed — only `.env.example` is tracked.
+Every variable has a safe default (`src/lib/env.ts`), including
+`NEXT_PUBLIC_API_BASE_URL`, which defaults to the real deployed API Gateway
+(`https://servora-api-gateway.onrender.com`) — so **the app runs with zero
+configuration** and, unlike the mock marketplace data, its auth calls reach a
+real backend even in local dev. Only `NEXT_PUBLIC_`-prefixed variables belong
+in this file; Next.js inlines those into the browser bundle at build time, so
+nothing secret can ever go behind that prefix. `.env`, `.env.local` and
+friends are gitignored and must never be committed — only `.env.example` is
+tracked.
+
+Note for local development: the Gateway's CORS allow-list is configured for
+the production frontend origin, not `http://localhost:3000`, so auth requests
+made from a local dev server will fail with a CORS error in the browser
+console (visible as the app's own "Couldn't reach the server" state, not a
+crash) until the Gateway's `CORS_ALLOWED_ORIGINS` includes your local origin.
+This is an operational config concern in `servora-api-gateway`, not something
+fixable from this repo.
 
 ## Production build
 
@@ -148,49 +165,187 @@ This is **not yet wired up** — there is no deploy step in CI and no Vercel
 project connected. That's a deliberate next milestone, kept separate from
 this one.
 
+In practice, this app is currently also deployed on Render
+(`https://servora-web.onrender.com`), outside of this planned path — that
+deployment isn't described by anything in this repo (no `render.yaml`), so
+treat it as configured directly in the Render dashboard. Worth noting for
+`/verify-email` and `/reset-password` specifically: both are ordinary
+Next.js App Router pages, prerendered to real static HTML at build time (see
+the `○ (Static)` output of `next build`) — not client-only routes bolted on
+top of a single-page app — so a Node/Next-based Render service serves a
+direct navigation to either URL (with or without a `?token=`) correctly with
+no SPA catch-all rewrite required.
+
+## Authentication
+
+```
+Browser (this repo) → servora-api-gateway → servora-auth
+```
+
+This frontend never calls `servora-auth` directly, and never invents an
+endpoint — every call in `src/lib/auth/api.ts` was verified against
+`servora-auth`'s actual route/schema source before being written. All auth
+traffic goes through the deployed Gateway at `NEXT_PUBLIC_API_BASE_URL`
+(default `https://servora-api-gateway.onrender.com`), under the fixed prefix
+`/api/v1/auth/*`.
+
+### Session model
+
+Sessions are an **opaque, `httpOnly` cookie** (`servora_session`) set by
+`servora-auth` and forwarded verbatim by the Gateway — **not** a JWT. The
+browser cannot read, decode, or store it itself; every request that needs to
+know "am I logged in" calls `GET /api/v1/auth/session` with
+`credentials: "include"` and reads the answer from the response body.
+`src/lib/auth/AuthProvider.tsx` wraps this in a `useAuth()` context
+(`user`, `status`, `refresh()`, `setUser()`, `signOut()`) that the whole app
+reads from — most visibly the Navbar, which shows Log in/Get started or the
+signed-in email/Log out depending on `status`.
+
+### Endpoints used
+
+| Flow | Endpoint | Notes |
+| --- | --- | --- |
+| Register | `POST /api/v1/auth/register` | Body: `{ email, password }` only — no name/phone/role field exists server-side. **Logs the user in immediately** (sets the session cookie) even though `emailVerified` starts `false`. |
+| Login | `POST /api/v1/auth/login` | Body: `{ email, password }`. The backend does **not** block login for an unverified account — `emailVerified` in the response is just a signal the UI uses to nudge the user, not a gate. |
+| Logout | `POST /api/v1/auth/logout` | No body, `204`. |
+| Session check | `GET /api/v1/auth/session` | Always `200`; the body's `authenticated` field is the discriminant. |
+| Verify email | `POST /api/v1/auth/email/verify` | Body: `{ token }` — the token travels in the JSON body, never a query/path param at the API level. |
+| Resend verification | `POST /api/v1/auth/email/resend` | Body: `{ email }`. Always returns the same generic message (account-enumeration-safe by design). |
+| Request password reset | `POST /api/v1/auth/password/reset/request` | Body: `{ email }`. Same enumeration-safe pattern as resend. |
+| Confirm password reset | `POST /api/v1/auth/password/reset/confirm` | Body: `{ token, newPassword }`. **Revokes every existing session** for that account — the UI treats the caller as logged out afterward and routes to login, never assuming continued auth. |
+
+`/email/verify` and `/password/reset/confirm` both collapse "invalid",
+"expired", and "already used" into one generic `400 TOKEN_INVALID` — the
+backend does not distinguish those cases, so this UI doesn't invent a
+distinction either; there is exactly one "this link is invalid or expired"
+state for each flow, not three.
+
+### The auth UI
+
+`src/components/auth/` holds a single shared modal (`AuthModalProvider` /
+`AuthModal`), opened from anywhere via `useAuthModal().openLogin()` /
+`openSignup()`, that switches between `LoginForm`, `SignupForm`, and
+`ForgotPasswordForm` without closing — "Don't have an account? Sign up" and
+"Already have an account? Log in" swap the mode in place. It's focus-trapped,
+closes on Escape or a backdrop click (via the existing `Modal` primitive),
+and shows real loading/validation/error/success states rather than `alert()`
+or a raw API error dump — errors go through
+`src/lib/auth/errorMessages.ts`, which turns a backend error code into
+human copy (falling back to the backend's own message for any code it
+doesn't have bespoke copy for).
+
+### Email verification & password reset: the token-in-URL flow
+
+Both `servora-notification`'s verification email and the password-reset
+email link to a URL carrying the token as a query parameter
+(`/verify-email?token=…`, `/reset-password?token=…`) — that's a transport
+necessity, not something this app can avoid. What happens the moment the
+page loads (`src/components/auth/VerifyEmailView.tsx` and
+`ResetPasswordView.tsx`, both mounted behind a `Suspense` boundary in
+`src/app/verify-email/page.tsx` / `src/app/reset-password/page.tsx`) is:
+
+1. The token is read **once**, from the URL present at mount.
+2. `window.history.replaceState(null, "", "/verify-email")` (no reload)
+   strips it from the visible address bar **immediately** — before the
+   verification/reset request is even sent, and even when there's no token
+   to strip (so a stray empty `?token=` doesn't linger either).
+3. The token is held only in a `useRef`/local variable for the rest of the
+   component's life — it is never written to `localStorage` or
+   `sessionStorage`, and a `useRef` guard ensures the verify/reset request
+   fires exactly once per real token, even under React's dev-mode double-effect.
+4. The request goes to the Gateway over HTTPS, `credentials: "include"`,
+   exactly like every other auth call.
+5. Success clears to a clean state (`/verify-email` or `/reset-password`,
+   no query string) and offers a "Continue to login" action. Failure shows
+   the one generic invalid/expired state (with a "resend a new link" mini
+   form on `/verify-email`), or a distinct, retryable "couldn't reach the
+   server" state for a genuine network failure — never the token itself, in
+   either case.
+6. Because the URL is already clean by the time step 2 finishes, **refreshing
+   the page after verifying does not re-attempt verification** — it just
+   shows the same "no link found" state a direct visit with no token would.
+
+`src/lib/auth/client.ts` (the one shared fetch layer everything above uses)
+deliberately never calls `console.log`/`console.error` on any request or
+response — those paths are reachable from the token-carrying flows above, so
+logging there is avoided entirely rather than trying to redact after the
+fact. This is covered by tests — see [Testing](#testing).
+
+### Known backend/operational risks (not fixed here — out of scope for this repo)
+
+Two issues were found while verifying the real contracts above, in
+`servora-api-gateway` and `servora-auth`'s own source. Neither is caused by
+or fixable from this repository; they're documented here so they aren't
+mistaken for frontend bugs:
+
+- **Cross-origin cookie risk**: `servora-web.onrender.com` and
+  `servora-api-gateway.onrender.com` are different registrable domains (not
+  subdomains of a shared parent). The session cookie's `sameSite` defaults to
+  `'lax'` in `servora-auth`, which does not reliably survive a cross-site
+  `fetch`/XHR with `credentials: "include"` — it needs `SameSite=None;
+  Secure` for this architecture to work in production. This frontend always
+  sends `credentials: "include"` correctly; whether the cookie actually
+  round-trips is an environment/cookie-config concern in `servora-auth`.
+- **Gateway → auth internal identity check is broken**: `servora-api-gateway`'s
+  internal `/internal/v1/sessions/verify` call never sends the
+  `x-servora-internal-key` header `servora-auth` requires for it, so that
+  call 401s in production. It does **not** break anything this frontend uses
+  (register/login/logout/verify/reset are pure passthrough proxying), but it
+  does mean `request.identity`/`x-user-*` headers are never populated for
+  other services behind the Gateway.
+
 ## Future API boundary
 
 ```
-Browser → API Gateway → Servora services (Auth, Booking, Payments, Search, AI, Notifications)
+Browser → API Gateway → Servora services (Auth ✅ real, Booking, Payments, Search, AI, Notifications ⏳ mock)
 ```
 
-The planned production API origin is `https://api.servora.hemandu.com` —
-documented here as intent, **not implemented or called anywhere in this
-codebase**. The app remains fully functional on local mock data
-(`src/data/`, read through `src/lib/api/`) until a real Gateway exists to
-point it at.
+Authentication (above) is the first slice of this boundary that's real.
+Everything else — bookings, payments, search, the AI assistant — is still
+local mock data (`src/data/`, read through `src/lib/api/`) until those
+services exist to point at; wiring each one up later means replacing the
+body of the matching function in `src/lib/api`, not changing components.
 
 ## Project structure
 
 ```
 src/
-├── app/                 # Next.js App Router entry — layout, page, globals.css
+├── app/                 # Next.js App Router entry — layout, globals.css, and pages:
+│   ├── page.tsx          #   the marketplace landing page (mock data)
+│   ├── verify-email/       #   email verification landing route — see "Authentication"
+│   └── reset-password/      #   password reset landing route — see "Authentication"
 ├── components/
 │   ├── ui/               # Design-system primitives — see "Design system" below
-│   ├── layout/            # Navbar, Footer, smooth-scroll & anchor-scroll providers
-│   ├── hero/               # Hero copy, search bar, hero visual composition
-│   ├── categories/          # Popular categories grid
-│   ├── providers/            # Featured provider cards + profile modal
-│   ├── scroll-story/          # The cinematic scroll-linked "How it works" sequence
-│   ├── ai/                     # AI assistant showcase (a scripted demo conversation)
-│   ├── trust/                   # Trust section + the reusable verification badge list
-│   ├── testimonials/             # Customer reviews
-│   ├── business/                  # Provider/business CTA
-│   └── final-cta/                  # Closing call to action
+│   ├── auth/              # Auth modal, Login/Signup/ForgotPassword forms, verify/reset views
+│   ├── layout/             # Navbar, Footer, smooth-scroll & anchor-scroll providers
+│   ├── hero/                # Hero copy, search bar, hero visual composition
+│   ├── categories/            # Popular categories grid
+│   ├── providers/               # Featured provider cards + profile modal
+│   ├── scroll-story/              # The cinematic scroll-linked "How it works" sequence
+│   ├── ai/                          # AI assistant showcase (a scripted demo conversation)
+│   ├── trust/                         # Trust section + the reusable verification badge list
+│   ├── testimonials/                    # Customer reviews
+│   ├── business/                          # Provider/business CTA
+│   └── final-cta/                           # Closing call to action
 ├── data/                 # Typed mock data (categories, providers, reviews, …)
 ├── lib/
-│   ├── api/               # Mock service layer — the ONLY place UI reads "backend" data
-│   ├── env.ts                # Centralized environment variable access (see below)
-│   ├── media.ts             # Deterministic generated art standing in for provider photos
-│   └── utils.ts               # cn() class merging (tailwind-merge, extended — see below), formatters
+│   ├── api/               # Mock service layer — the ONLY place UI reads "backend" marketplace data
+│   ├── auth/                # Real backend calls — types, fetch client, endpoint wrappers, AuthProvider (see "Authentication")
+│   ├── env.ts                 # Centralized environment variable access (see below)
+│   ├── media.ts                 # Deterministic generated art standing in for provider photos
+│   └── utils.ts                   # cn() class merging (tailwind-merge, extended — see below), formatters
 ├── types/                # Shared domain types (Provider, booking status, roles, …)
 ├── hooks/                # useScrolled, usePrefersReducedMotion, useFocusTrap, …
-└── animations/           # Framer Motion variants + named reveal components (FadeIn, SlideUp, …)
+├── animations/           # Framer Motion variants + named reveal components (FadeIn, SlideUp, …)
+└── test/                 # Shared test setup (renderWithProviders) — see "Testing"
 ```
 
 Nothing outside `src/components/ui` should read `src/data` directly —
-everything goes through `src/lib/api`, so the migration to a real backend is
-a change in one folder, not a search-and-replace across the app.
+everything goes through `src/lib/api`, so extending the mock marketplace
+layer to a real backend later is a change in one folder, not a
+search-and-replace across the app. `src/lib/auth` is intentionally kept
+separate from `src/lib/api` — one talks to a real, deployed service today,
+the other returns fixtures — so the two are never confused mid-migration.
 
 ## Design system
 
@@ -275,14 +430,49 @@ relies on a single fixed breakpoint jump — spacing, grid column counts and
 type sizes (via `clamp()`-based tokens) scale continuously between the
 scales Tailwind exposes (`sm`/`md`/`lg`/`xl`).
 
+## Testing
+
+[Vitest](https://vitest.dev) + [React Testing Library](https://testing-library.com/react),
+covering `src/lib/auth` and `src/components/auth` — the parts of this app
+that talk to a real backend and carry the most risk if they regress:
+
+- **Auth UI**: the shared modal opens/closes/switches between
+  login/signup/forgot-password, and closes on Escape and on `close()`.
+- **Sign up**: calls `register()` with exactly `{ email, password }` (never
+  `confirmPassword`, which is client-only), surfaces validation errors
+  (password length, mismatch) without calling the API, shows the real
+  duplicate-email message on `409`, and shows the "check your email" success
+  state — including resend — without implying the account is verified.
+- **Login**: calls `login()` with the entered credentials, shows validation
+  errors for an empty submit, shows the real "don't match" message on `401`,
+  and confirms an unverified account still logs in successfully (matching
+  the real backend, which never blocks on `emailVerified`).
+- **Email verification & password reset**: the token is extracted from the
+  URL and the URL is stripped **before** the request settles; the correct
+  endpoint is called with the token in the request body; a `TOKEN_INVALID`
+  response produces the one generic invalid/expired state (not separate
+  expired/used states); a non-token failure produces a distinct, retryable
+  network-error state; the raw token is asserted to never reach
+  `console.log`/`console.error` or `localStorage`/`sessionStorage`; and a
+  simulated refresh after the URL is already clean does **not** re-trigger
+  verification.
+- **The fetch layer** (`src/lib/auth/client.ts`): correct `credentials:
+  "include"` on every call, correct parsing of both the success and
+  `{ error: { code, message, requestId } }` shapes, the synthetic
+  network/malformed-response client codes, and — again — that nothing is
+  ever logged.
+
 ## What's intentionally not here
 
-Per scope, this repository does not include real authentication, a
-database, payment processing, live search, or any backend service — and
-none of PostgreSQL, Redis, RabbitMQ, Kubernetes, or an API Gateway belong
-here either; those are other repositories' concerns. Interactive elements
-that would need a backend (search submission, "Request booking", "View all
-providers") surface an honest in-product state — a toast or a disabled
-control — rather than pretending to work. `EmptyState` and `ErrorState`
-exist for the same reason: ready-made states for real API integrations to
-use later, not wired to anything yet.
+Per scope, this repository's marketplace side (browsing, booking, search,
+payments) is still mock — authentication is the one real backend integration
+so far (see [Authentication](#authentication)). This repo still contains no
+database, payment processing, or live search of its own, and none of
+PostgreSQL, Redis, RabbitMQ, Kubernetes, or the API Gateway's own
+implementation belong here either; those are other repositories' concerns.
+Interactive elements that would need a backend that doesn't exist yet
+(search submission, "Request booking", "View all providers") surface an
+honest in-product state — a toast or a disabled control — rather than
+pretending to work. `EmptyState` and `ErrorState` exist for the same reason:
+ready-made states for real API integrations to use, some already wired
+(auth), most not yet.
