@@ -1,10 +1,13 @@
+import { StrictMode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/test/test-utils";
 import { VerifyEmailView } from "@/components/auth/VerifyEmailView";
-import { verifyEmail, resendVerificationEmail } from "@/lib/auth/api";
+import { verifyEmail, resendVerificationEmail, getSession } from "@/lib/auth/api";
 import { ApiError } from "@/lib/auth/client";
 import { AuthErrorCode } from "@/lib/auth/types";
+import { ToastProvider } from "@/components/ui/Toast";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
 
 const openLogin = vi.fn();
 const push = vi.fn();
@@ -21,11 +24,12 @@ vi.mock("@/components/auth/AuthModalProvider", () => ({
 
 vi.mock("@/lib/auth/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/auth/api")>();
-  return { ...actual, verifyEmail: vi.fn(), resendVerificationEmail: vi.fn() };
+  return { ...actual, verifyEmail: vi.fn(), resendVerificationEmail: vi.fn(), getSession: vi.fn() };
 });
 
 const mockedVerifyEmail = vi.mocked(verifyEmail);
 const mockedResend = vi.mocked(resendVerificationEmail);
+const mockedGetSession = vi.mocked(getSession);
 
 function setUrl(search: string) {
   searchParams = new URLSearchParams(search);
@@ -38,6 +42,8 @@ describe("VerifyEmailView", () => {
     push.mockClear();
     mockedVerifyEmail.mockReset();
     mockedResend.mockReset();
+    mockedGetSession.mockReset();
+    mockedGetSession.mockResolvedValue({ authenticated: false });
   });
 
   it("shows a missing-link state and never calls the API when there is no token", async () => {
@@ -73,16 +79,62 @@ describe("VerifyEmailView", () => {
     expect(mockedVerifyEmail).toHaveBeenCalledWith("abc123");
   });
 
-  it("shows a success state and offers to continue to login", async () => {
+  it("when not logged in, shows success and offers a Log in action (not a fake authenticated state)", async () => {
     setUrl("token=abc123");
     mockedVerifyEmail.mockResolvedValue({ verified: true });
+    mockedGetSession.mockResolvedValue({ authenticated: false });
 
     renderWithProviders(<VerifyEmailView />);
 
-    expect(await screen.findByText(/email verified/i)).toBeInTheDocument();
-    screen.getByRole("button", { name: /continue to login/i }).click();
+    expect(await screen.findByText(/email verified successfully/i)).toBeInTheDocument();
+    expect(screen.getByText(/log in to continue/i)).toBeInTheDocument();
+    screen.getByRole("button", { name: /^log in$/i }).click();
     expect(openLogin).toHaveBeenCalled();
     expect(push).toHaveBeenCalledWith("/");
+  });
+
+  it("when already logged in, revalidates the session so emailVerified flips to true and offers to continue (not another login)", async () => {
+    setUrl("token=abc123");
+    mockedVerifyEmail.mockResolvedValue({ verified: true });
+    mockedGetSession.mockResolvedValue({
+      authenticated: true,
+      userId: "u1",
+      email: "user@example.com",
+      role: "CUSTOMER",
+      emailVerified: true,
+      phoneVerified: false,
+    });
+
+    renderWithProviders(<VerifyEmailView />);
+
+    expect(await screen.findByText(/email verified successfully/i)).toBeInTheDocument();
+    // The session was re-checked (not just assumed) after a successful verify.
+    await waitFor(() => expect(mockedGetSession).toHaveBeenCalled());
+    expect(screen.getByText(/you're all set/i)).toBeInTheDocument();
+
+    const continueButton = screen.getByRole("button", { name: /continue to servora/i });
+    expect(screen.queryByRole("button", { name: /^log in$/i })).not.toBeInTheDocument();
+    continueButton.click();
+    expect(push).toHaveBeenCalledWith("/");
+    expect(openLogin).not.toHaveBeenCalled();
+  });
+
+  it("calls verifyEmail exactly once under React StrictMode's double-invoke behavior", async () => {
+    setUrl("token=abc123");
+    mockedVerifyEmail.mockResolvedValue({ verified: true });
+
+    render(
+      <StrictMode>
+        <ToastProvider>
+          <AuthProvider>
+            <VerifyEmailView />
+          </AuthProvider>
+        </ToastProvider>
+      </StrictMode>,
+    );
+
+    await screen.findByText(/email verified successfully/i);
+    expect(mockedVerifyEmail).toHaveBeenCalledTimes(1);
   });
 
   it("shows one generic invalid-or-expired state for TOKEN_INVALID (no separate expired/used states)", async () => {

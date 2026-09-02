@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Input } from "@/components/ui/Input";
 import { useAuthModal } from "@/components/auth/AuthModalProvider";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { verifyEmail, resendVerificationEmail } from "@/lib/auth/api";
 import { ApiError } from "@/lib/auth/client";
 import { AuthErrorCode } from "@/lib/auth/types";
@@ -33,6 +34,7 @@ export function VerifyEmailView() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { openLogin } = useAuthModal();
+  const { status, refresh } = useAuth();
 
   // Whether a token was present is derived once, during the initial
   // render, straight from the URL the page was opened with — so the
@@ -57,7 +59,16 @@ export function VerifyEmailView() {
     if (!token) return;
 
     verifyEmail(token)
-      .then(() => setState("success"))
+      .then(async () => {
+        // Login/session state and email-verification state are separate
+        // (a user can already be logged in with emailVerified: false from
+        // registration). Re-checking the session here — rather than just
+        // assuming success means "verified" — lets an already-logged-in
+        // user's `emailVerified` flip to true immediately, without a
+        // manual refresh, and is a no-op if they aren't logged in at all.
+        await refresh();
+        setState("success");
+      })
       .catch((error: unknown) => {
         if (error instanceof ApiError && error.code === AuthErrorCode.TokenInvalid) {
           setState("invalid");
@@ -65,10 +76,14 @@ export function VerifyEmailView() {
           setState("network-error");
         }
       });
-  }, [searchParams]);
+  }, [searchParams, refresh]);
 
   function continueToLogin() {
     openLogin();
+    router.push("/");
+  }
+
+  function continueToApp() {
     router.push("/");
   }
 
@@ -76,7 +91,13 @@ export function VerifyEmailView() {
     <section className="flex min-h-[60vh] items-center py-20">
       <Container className="mx-auto max-w-md text-center">
         {state === "verifying" ? <VerifyingState /> : null}
-        {state === "success" ? <SuccessState onContinue={continueToLogin} /> : null}
+        {state === "success" ? (
+          <SuccessState
+            isAuthenticated={status === "authenticated"}
+            onContinueToApp={continueToApp}
+            onContinueToLogin={continueToLogin}
+          />
+        ) : null}
         {state === "missing" ? <MissingTokenState onContinue={continueToLogin} /> : null}
         {state === "invalid" ? <InvalidTokenState onContinue={continueToLogin} /> : null}
         {state === "network-error" ? (
@@ -97,19 +118,35 @@ function VerifyingState() {
   );
 }
 
-function SuccessState({ onContinue }: { onContinue: () => void }) {
+function SuccessState({
+  isAuthenticated,
+  onContinueToApp,
+  onContinueToLogin,
+}: {
+  isAuthenticated: boolean;
+  onContinueToApp: () => void;
+  onContinueToLogin: () => void;
+}) {
   return (
     <div className="flex flex-col items-center gap-4">
       <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-100 text-success-500">
         <CheckCircle2 size={28} aria-hidden />
       </span>
-      <h1 className="font-display text-h3 text-ink-900">Email verified</h1>
+      <h1 className="font-display text-h3 text-ink-900">Email verified successfully</h1>
       <p className="max-w-sm text-sm leading-relaxed text-text-secondary">
-        Your email address has been verified. You&apos;re all set — log in to continue.
+        {isAuthenticated
+          ? "Your email address is now verified. You're all set."
+          : "Your email address is now verified. Log in to continue."}
       </p>
-      <Button variant="primary" size="lg" onClick={onContinue} className="mt-2">
-        Continue to login
-      </Button>
+      {isAuthenticated ? (
+        <Button variant="primary" size="lg" onClick={onContinueToApp} className="mt-2">
+          Continue to Servora
+        </Button>
+      ) : (
+        <Button variant="primary" size="lg" onClick={onContinueToLogin} className="mt-2">
+          Log in
+        </Button>
+      )}
     </div>
   );
 }
