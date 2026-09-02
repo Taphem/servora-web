@@ -7,6 +7,12 @@ import { register, getSession, resendVerificationEmail } from "@/lib/auth/api";
 import { ApiError } from "@/lib/auth/client";
 import { AuthErrorCode } from "@/lib/auth/types";
 
+const push = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, replace: vi.fn() }),
+}));
+
 vi.mock("@/lib/auth/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/auth/api")>();
   return { ...actual, register: vi.fn(), getSession: vi.fn(), resendVerificationEmail: vi.fn() };
@@ -29,6 +35,7 @@ describe("SignupForm", () => {
     mockedGetSession.mockReset();
     mockedResend.mockReset();
     mockedGetSession.mockResolvedValue({ authenticated: false });
+    push.mockClear();
   });
 
   it("rejects a password shorter than the real backend's 10-character minimum", async () => {
@@ -112,7 +119,7 @@ describe("SignupForm", () => {
     );
   });
 
-  it("shows the phone verification card after signup only when a phone number was actually given", async () => {
+  it("shows a phone verification prompt after signup only when a phone number was actually given", async () => {
     const user = userEvent.setup();
     mockedRegister.mockResolvedValue({
       userId: "u1",
@@ -131,7 +138,7 @@ describe("SignupForm", () => {
 
     await screen.findByText(/check your email/i);
     expect(screen.getByText(/verify your phone number/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /send verification code/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /verify phone number/i })).toBeInTheDocument();
   });
 
   it("does not show any phone verification UI when the phone field was left blank", async () => {
@@ -152,7 +159,30 @@ describe("SignupForm", () => {
 
     await screen.findByText(/check your email/i);
     expect(screen.queryByText(/verify your phone number/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /send verification code/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /verify phone number/i })).not.toBeInTheDocument();
+  });
+
+  it("the phone verification prompt closes the modal and routes to the dedicated /verify-phone page, not an inline OTP workflow", async () => {
+    const user = userEvent.setup();
+    mockedRegister.mockResolvedValue({
+      userId: "u1",
+      email: "user@example.com",
+      role: "CUSTOMER",
+      emailVerified: false,
+      phoneVerified: false,
+    });
+    const { onDone } = setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/confirm password/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/phone number/i), "+14155552671");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    await screen.findByText(/check your email/i);
+
+    await user.click(screen.getByRole("button", { name: /verify phone number/i }));
+    expect(onDone).toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith("/verify-phone");
   });
 
   it("shows the duplicate-email message on 409 EMAIL_ALREADY_REGISTERED", async () => {

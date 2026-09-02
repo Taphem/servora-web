@@ -39,6 +39,8 @@ export function getAuthErrorMessage(error: unknown): string {
       return "We couldn't verify that Google account. Please try again.";
     case AuthErrorCode.GoogleOAuthNotConfigured:
       return "Google sign-in isn't available right now. Please use email and password.";
+    case AuthErrorCode.Unauthenticated:
+      return "Your session has expired. Please log in again.";
     case AuthErrorCode.DownstreamUnavailable:
     case AuthErrorCode.DownstreamTimeout:
     case AuthErrorCode.DownstreamNotConfigured:

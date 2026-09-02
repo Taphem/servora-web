@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { AlertCircle, MailCheck } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { PasswordField } from "@/components/auth/PasswordField";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { register, resendVerificationEmail } from "@/lib/auth/api";
 import { getAuthErrorMessage } from "@/lib/auth/errorMessages";
-import { PhoneVerificationCard } from "@/components/auth/PhoneVerificationCard";
+import { PhoneVerificationPrompt } from "@/components/auth/PhoneVerificationPrompt";
 import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -207,7 +208,15 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
 }
 
 function SignupSuccess({ email, phone, onDone }: { email: string; phone: string | null; onDone: () => void }) {
+  const router = useRouter();
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
+
+  function handleVerifyPhone() {
+    // Close the modal, then hand off to the dedicated /verify-phone route
+    // — the actual OTP workflow lives there, not inside this modal.
+    onDone();
+    router.push("/verify-phone");
+  }
 
   async function handleResend() {
     setResendState("sending");
@@ -234,7 +243,7 @@ function SignupSuccess({ email, phone, onDone }: { email: string; phone: string 
         </p>
       </div>
 
-      {phone ? <PhoneVerificationCard phone={phone} /> : null}
+      {phone ? <PhoneVerificationPrompt phone={phone} onVerify={handleVerifyPhone} /> : null}
 
       <Button variant="primary" size="lg" onClick={onDone} className="mt-2 w-full">
         Done

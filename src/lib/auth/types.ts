@@ -49,7 +49,7 @@ export const AuthErrorCode = {
   DownstreamUnavailable: "DOWNSTREAM_UNAVAILABLE",
   DownstreamTimeout: "DOWNSTREAM_TIMEOUT",
   DownstreamNotConfigured: "DOWNSTREAM_NOT_CONFIGURED",
-  /** POST /phone/otp/request: this account has no phone on file — never surfaced as a scary error, see PhoneVerificationCard. */
+  /** POST /phone/otp/request: this account has no phone on file — never surfaced as a scary error, see VerifyPhoneView. */
   PhoneNotSet: "PHONE_NOT_SET",
   PhoneAlreadyVerified: "PHONE_ALREADY_VERIFIED",
   /** POST /phone/otp/verify: no active challenge — covers both "expired" and "already used", the backend doesn't distinguish (Redis TTL removes the challenge either way). */
@@ -60,4 +60,6 @@ export const AuthErrorCode = {
   GoogleOAuthFailed: "GOOGLE_OAUTH_FAILED",
   /** POST /auth/google: servora-auth has no GOOGLE_CLIENT_ID configured server-side — an environment/ops issue, not a user error. */
   GoogleOAuthNotConfigured: "GOOGLE_OAUTH_NOT_CONFIGURED",
+  /** Both phone OTP endpoints require an existing session (requireSession()) — thrown when there's no/an invalid session cookie, e.g. it expired mid-flow. */
+  Unauthenticated: "UNAUTHENTICATED",
 } as const;

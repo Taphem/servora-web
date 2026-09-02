@@ -25,7 +25,7 @@ import type { AuthUser, SessionResponse } from "@/lib/auth/types";
  *    account have a phone on file" from session state alone; the only
  *    reliable signal is the immediate register() call in the same
  *    browser session, or a PHONE_NOT_SET response from the OTP-request
- *    endpoint itself. See PhoneVerificationCard.
+ *    endpoint itself. See VerifyPhoneView.
  *  - Google auth (POST /auth/google) has no separate login/signup mode
  *    — servora-auth resolves-or-creates the account and returns the
  *    exact same response shape as login(), 200, with the session
