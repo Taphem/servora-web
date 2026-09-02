@@ -35,6 +35,10 @@ export function getAuthErrorMessage(error: unknown): string {
       return "Too many incorrect attempts. Send a new code and try again.";
     case AuthErrorCode.OtpInvalid:
       return "That code isn't right. Check it and try again.";
+    case AuthErrorCode.GoogleOAuthFailed:
+      return "We couldn't verify that Google account. Please try again.";
+    case AuthErrorCode.GoogleOAuthNotConfigured:
+      return "Google sign-in isn't available right now. Please use email and password.";
     case AuthErrorCode.DownstreamUnavailable:
     case AuthErrorCode.DownstreamTimeout:
     case AuthErrorCode.DownstreamNotConfigured:

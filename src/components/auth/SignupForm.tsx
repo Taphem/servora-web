@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { register, resendVerificationEmail } from "@/lib/auth/api";
 import { getAuthErrorMessage } from "@/lib/auth/errorMessages";
 import { PhoneVerificationCard } from "@/components/auth/PhoneVerificationCard";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 10;
@@ -113,12 +114,24 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
     }
   }
 
+  function handleGoogleSuccess() {
+    setFormError(null);
+    // Google auth is one action, not "Google signup" — servora-auth
+    // resolves-or-creates the account and the response is already a
+    // full session (see GoogleAuthButton), so there's no "check your
+    // email"/phone-verification intermediate step to show here: the
+    // account is either brand new with emailVerified already true
+    // (Google's verified email is trusted server-side), or it's an
+    // existing account being logged into. Either way, done.
+    onDone();
+  }
+
   if (registeredEmail) {
     return <SignupSuccess email={registeredEmail} phone={registeredPhone} onDone={onDone} />;
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {formError ? (
         <div
           role="alert"
@@ -129,63 +142,67 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
         </div>
       ) : null}
 
-      <Input
-        id="signup-email"
-        type="email"
-        label="Email"
-        autoComplete="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        errorText={fieldErrors.email}
-        disabled={loading}
-        placeholder="you@example.com"
-      />
+      <GoogleAuthButton onSuccess={handleGoogleSuccess} onError={setFormError} />
 
-      <PasswordField
-        id="signup-password"
-        label="Password"
-        autoComplete="new-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        errorText={fieldErrors.password}
-        helperText={fieldErrors.password ? undefined : `At least ${PASSWORD_MIN_LENGTH} characters.`}
-        disabled={loading}
-      />
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <Input
+          id="signup-email"
+          type="email"
+          label="Email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          errorText={fieldErrors.email}
+          disabled={loading}
+          placeholder="you@example.com"
+        />
 
-      <PasswordField
-        id="signup-confirm-password"
-        label="Confirm password"
-        autoComplete="new-password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        errorText={fieldErrors.confirmPassword}
-        disabled={loading}
-      />
+        <PasswordField
+          id="signup-password"
+          label="Password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          errorText={fieldErrors.password}
+          helperText={fieldErrors.password ? undefined : `At least ${PASSWORD_MIN_LENGTH} characters.`}
+          disabled={loading}
+        />
 
-      <Input
-        id="signup-phone"
-        type="tel"
-        label="Phone number (optional)"
-        autoComplete="tel"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        errorText={fieldErrors.phone}
-        helperText={fieldErrors.phone ? undefined : "International format with country code, e.g. +14155552671."}
-        disabled={loading}
-        placeholder="+14155552671"
-      />
+        <PasswordField
+          id="signup-confirm-password"
+          label="Confirm password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          errorText={fieldErrors.confirmPassword}
+          disabled={loading}
+        />
 
-      <Button type="submit" variant="primary" size="lg" loading={loading} className="mt-1 w-full">
-        Create account
-      </Button>
+        <Input
+          id="signup-phone"
+          type="tel"
+          label="Phone number (optional)"
+          autoComplete="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          errorText={fieldErrors.phone}
+          helperText={fieldErrors.phone ? undefined : "International format with country code, e.g. +14155552671."}
+          disabled={loading}
+          placeholder="+14155552671"
+        />
 
-      <p className="text-center text-sm text-text-secondary">
-        Already have an account?{" "}
-        <button type="button" onClick={onSwitchToLogin} className="font-medium text-text-brand hover:underline">
-          Log in
-        </button>
-      </p>
-    </form>
+        <Button type="submit" variant="primary" size="lg" loading={loading} className="mt-1 w-full">
+          Create account
+        </Button>
+
+        <p className="text-center text-sm text-text-secondary">
+          Already have an account?{" "}
+          <button type="button" onClick={onSwitchToLogin} className="font-medium text-text-brand hover:underline">
+            Log in
+          </button>
+        </p>
+      </form>
+    </div>
   );
 }
 

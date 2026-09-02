@@ -18,4 +18,17 @@ export const env = {
    * works against real auth with zero local configuration.
    */
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://servora-api-gateway.onrender.com",
+
+  /**
+   * Google's OAuth 2.0 Client ID, used only to initialize Google
+   * Identity Services in the browser (google.accounts.id.initialize).
+   * This is a public identifier, not a secret — Google's own docs
+   * describe it as safe to embed in client-side code, unlike the
+   * client SECRET, which must never exist in this repo or bundle.
+   * No safe non-empty default exists (unlike apiBaseUrl, there's no
+   * "already deployed" Client ID to fall back to) — an empty string
+   * means "not configured", and GoogleAuthButton hides itself rather
+   * than initializing GIS with a blank client_id.
+   */
+  googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "",
 } as const;

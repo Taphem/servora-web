@@ -56,4 +56,8 @@ export const AuthErrorCode = {
   OtpNotRequested: "OTP_NOT_REQUESTED",
   OtpAttemptsExceeded: "OTP_ATTEMPTS_EXCEEDED",
   OtpInvalid: "OTP_INVALID",
+  /** POST /auth/google: collapses every Google ID-token verification failure (expired, bad signature, wrong audience, malformed) into one code — the backend deliberately doesn't distinguish them. */
+  GoogleOAuthFailed: "GOOGLE_OAUTH_FAILED",
+  /** POST /auth/google: servora-auth has no GOOGLE_CLIENT_ID configured server-side — an environment/ops issue, not a user error. */
+  GoogleOAuthNotConfigured: "GOOGLE_OAUTH_NOT_CONFIGURED",
 } as const;

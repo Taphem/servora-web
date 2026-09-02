@@ -26,6 +26,12 @@ import type { AuthUser, SessionResponse } from "@/lib/auth/types";
  *    reliable signal is the immediate register() call in the same
  *    browser session, or a PHONE_NOT_SET response from the OTP-request
  *    endpoint itself. See PhoneVerificationCard.
+ *  - Google auth (POST /auth/google) has no separate login/signup mode
+ *    — servora-auth resolves-or-creates the account and returns the
+ *    exact same response shape as login(), 200, with the session
+ *    cookie already set. A brand-new Google user gets emailVerified:
+ *    true immediately (Google's own verified email is trusted) and
+ *    phone: null — phone is never requested or required here.
  */
 
 export function register(email: string, password: string, phone?: string): Promise<AuthUser> {
@@ -38,6 +44,16 @@ export function register(email: string, password: string, phone?: string): Promi
 
 export function login(email: string, password: string): Promise<AuthUser> {
   return apiRequest<AuthUser>("/api/v1/auth/login", { method: "POST", body: { email, password } });
+}
+
+/**
+ * One action, not two: this is authentication, not "Google signup" or
+ * "Google login" — servora-auth resolves or creates the account and
+ * either way returns the same shape login() does. Never send anything
+ * but the ID token; never decode/trust the credential client-side.
+ */
+export function authenticateWithGoogle(credential: string): Promise<AuthUser> {
+  return apiRequest<AuthUser>("/api/v1/auth/google", { method: "POST", body: { credential } });
 }
 
 export function logout(): Promise<void> {

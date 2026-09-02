@@ -11,6 +11,7 @@ import {
   confirmPasswordReset,
   requestPhoneOtp,
   verifyPhoneOtp,
+  authenticateWithGoogle,
 } from "@/lib/auth/api";
 
 vi.mock("@/lib/auth/client", async (importOriginal) => {
@@ -109,5 +110,16 @@ describe("auth api wrappers call the real, verified gateway contract", () => {
       method: "POST",
       body: { otp: "123456" },
     });
+  });
+
+  it("authenticateWithGoogle: POST /api/v1/auth/google with exactly { credential } — no email/password", async () => {
+    await authenticateWithGoogle("the-google-id-token");
+    expect(mockedApiRequest).toHaveBeenCalledWith("/api/v1/auth/google", {
+      method: "POST",
+      body: { credential: "the-google-id-token" },
+    });
+    const [, options] = mockedApiRequest.mock.calls[0];
+    const body = (options as { body: object }).body;
+    expect(Object.keys(body)).toEqual(["credential"]);
   });
 });

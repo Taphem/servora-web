@@ -9,6 +9,8 @@ import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { login } from "@/lib/auth/api";
 import { getAuthErrorMessage } from "@/lib/auth/errorMessages";
+import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import type { AuthUser } from "@/lib/auth/types";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -60,8 +62,14 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword, onSucces
     }
   }
 
+  function handleGoogleSuccess(user: AuthUser) {
+    setFormError(null);
+    onSuccess();
+    showToast(user.emailVerified ? "Welcome back." : "Signed in with Google.");
+  }
+
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {formError ? (
         <div
           id={errorId}
@@ -73,47 +81,51 @@ export function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword, onSucces
         </div>
       ) : null}
 
-      <Input
-        id="login-email"
-        type="email"
-        label="Email"
-        autoComplete="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        errorText={fieldErrors.email}
-        disabled={loading}
-        placeholder="you@example.com"
-      />
+      <GoogleAuthButton onSuccess={handleGoogleSuccess} onError={setFormError} />
 
-      <div className="flex flex-col gap-1.5">
-        <PasswordField
-          id="login-password"
-          label="Password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          errorText={fieldErrors.password}
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <Input
+          id="login-email"
+          type="email"
+          label="Email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          errorText={fieldErrors.email}
           disabled={loading}
+          placeholder="you@example.com"
         />
-        <button
-          type="button"
-          onClick={onSwitchToForgotPassword}
-          className="self-end text-xs font-medium text-text-brand hover:underline"
-        >
-          Forgot password?
-        </button>
-      </div>
 
-      <Button type="submit" variant="primary" size="lg" loading={loading} className="mt-1 w-full">
-        Log in
-      </Button>
+        <div className="flex flex-col gap-1.5">
+          <PasswordField
+            id="login-password"
+            label="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            errorText={fieldErrors.password}
+            disabled={loading}
+          />
+          <button
+            type="button"
+            onClick={onSwitchToForgotPassword}
+            className="self-end text-xs font-medium text-text-brand hover:underline"
+          >
+            Forgot password?
+          </button>
+        </div>
 
-      <p className="text-center text-sm text-text-secondary">
-        Don&apos;t have an account?{" "}
-        <button type="button" onClick={onSwitchToSignup} className="font-medium text-text-brand hover:underline">
-          Sign up
-        </button>
-      </p>
-    </form>
+        <Button type="submit" variant="primary" size="lg" loading={loading} className="mt-1 w-full">
+          Log in
+        </Button>
+
+        <p className="text-center text-sm text-text-secondary">
+          Don&apos;t have an account?{" "}
+          <button type="button" onClick={onSwitchToSignup} className="font-medium text-text-brand hover:underline">
+            Sign up
+          </button>
+        </p>
+      </form>
+    </div>
   );
 }
