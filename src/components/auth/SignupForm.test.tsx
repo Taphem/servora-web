@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/test-utils";
 import { SignupForm } from "@/components/auth/SignupForm";
@@ -108,6 +108,63 @@ describe("SignupForm", () => {
 
     expect(await screen.findByText(/check your email/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/^password$/i)).not.toBeInTheDocument();
+  });
+
+  it("sends exactly one /register request even when the form is submitted twice before the first response lands", async () => {
+    // Simulates a double-click or a repeated Enter key: two submit events
+    // fire before React has a chance to re-render the button as disabled.
+    let resolveRegister!: (user: Awaited<ReturnType<typeof register>>) => void;
+    mockedRegister.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRegister = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/confirm password/i), "longenoughpassword");
+
+    const form = screen.getByRole("button", { name: /create account/i }).closest("form")!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(mockedRegister).toHaveBeenCalledTimes(1);
+
+    resolveRegister({
+      userId: "u1",
+      email: "user@example.com",
+      role: "CUSTOMER",
+      emailVerified: false,
+      phoneVerified: false,
+    });
+    await screen.findByText(/check your email/i);
+    expect(mockedRegister).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-enables submission after a failed attempt, without ever sending a second concurrent request", async () => {
+    const user = userEvent.setup();
+    mockedRegister.mockRejectedValueOnce(new ApiError(AuthErrorCode.EmailAlreadyRegistered, "backend message", 409));
+    mockedRegister.mockResolvedValueOnce({
+      userId: "u1",
+      email: "user@example.com",
+      role: "CUSTOMER",
+      emailVerified: false,
+      phoneVerified: false,
+    });
+    setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/confirm password/i), "longenoughpassword");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    await screen.findByRole("alert");
+
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    await screen.findByText(/check your email/i);
+    expect(mockedRegister).toHaveBeenCalledTimes(2);
   });
 
   it("lets the user resend the verification email from the success state", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { AlertCircle, MailCheck } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { PasswordField } from "@/components/auth/PasswordField";
@@ -32,6 +32,14 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  // Synchronous guard against a second /register call — `loading` alone
+  // only disables the button once React re-renders and commits, which
+  // leaves a real window (double-click, a held/repeated Enter key, or
+  // Enter immediately followed by a click) for a second submit event to
+  // reach handleSubmit before that happens. A ref is checked/set in the
+  // same tick the handler starts, closing that window regardless of
+  // render timing.
+  const submittingRef = useRef(false);
 
   function validate() {
     const errors: typeof fieldErrors = {};
@@ -51,21 +59,31 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    // Ignore a duplicate submit (double-click, key-repeat on Enter, or
+    // Enter immediately followed by a click) while one is already in
+    // flight — see the comment on submittingRef above.
+    if (submittingRef.current) return;
+
     setFormError(null);
     if (!validate()) return;
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       const user = await register(email.trim(), password);
       // Registration logs the user in immediately (see src/lib/auth/api.ts)
       // — reflecting that here is accurate, not "pretending" they're
       // verified; emailVerified stays false until they act on the email.
+      // No separate login() call: the backend already returned a full
+      // session on this one request, so calling login() again would just
+      // be a second, unnecessary network round trip.
       setUser(user);
       setRegisteredEmail(user.email);
     } catch (error) {
       setFormError(getAuthErrorMessage(error));
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   }
 
