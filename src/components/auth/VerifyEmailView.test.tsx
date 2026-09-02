@@ -146,6 +146,19 @@ describe("VerifyEmailView", () => {
     expect(await screen.findByText(/invalid or has expired/i)).toBeInTheDocument();
   });
 
+  it("shows the same clean error state for an expired token — the backend returns the identical TOKEN_INVALID code for invalid, expired, and already-used tokens, so this UI doesn't invent a distinction it can't verify", async () => {
+    setUrl("token=an-expired-token");
+    mockedVerifyEmail.mockRejectedValue(
+      new ApiError(AuthErrorCode.TokenInvalid, "This verification link is invalid or has expired.", 400),
+    );
+
+    renderWithProviders(<VerifyEmailView />);
+
+    expect(await screen.findByText(/invalid or has expired/i)).toBeInTheDocument();
+    // No raw token, no backend internals in the rendered error.
+    expect(screen.queryByText(/an-expired-token/i)).not.toBeInTheDocument();
+  });
+
   it("shows a distinct, retryable network-error state for non-token failures", async () => {
     setUrl("token=abc123");
     mockedVerifyEmail.mockRejectedValue(new Error("boom"));
