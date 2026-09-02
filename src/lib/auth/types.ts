@@ -49,4 +49,11 @@ export const AuthErrorCode = {
   DownstreamUnavailable: "DOWNSTREAM_UNAVAILABLE",
   DownstreamTimeout: "DOWNSTREAM_TIMEOUT",
   DownstreamNotConfigured: "DOWNSTREAM_NOT_CONFIGURED",
+  /** POST /phone/otp/request: this account has no phone on file — never surfaced as a scary error, see PhoneVerificationCard. */
+  PhoneNotSet: "PHONE_NOT_SET",
+  PhoneAlreadyVerified: "PHONE_ALREADY_VERIFIED",
+  /** POST /phone/otp/verify: no active challenge — covers both "expired" and "already used", the backend doesn't distinguish (Redis TTL removes the challenge either way). */
+  OtpNotRequested: "OTP_NOT_REQUESTED",
+  OtpAttemptsExceeded: "OTP_ATTEMPTS_EXCEEDED",
+  OtpInvalid: "OTP_INVALID",
 } as const;

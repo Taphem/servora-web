@@ -76,6 +76,85 @@ describe("SignupForm", () => {
     expect(mockedRegister.mock.calls[0]).toHaveLength(2);
   });
 
+  it("rejects a phone number that isn't valid E.164 format, client-side, without calling the API", async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/confirm password/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/phone number/i), "0123-not-a-phone");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(await screen.findByText(/international format/i)).toBeInTheDocument();
+    expect(mockedRegister).not.toHaveBeenCalled();
+  });
+
+  it("includes a valid phone number in the registration request", async () => {
+    const user = userEvent.setup();
+    mockedRegister.mockResolvedValue({
+      userId: "u1",
+      email: "user@example.com",
+      role: "CUSTOMER",
+      emailVerified: false,
+      phoneVerified: false,
+    });
+    setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/confirm password/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/phone number/i), "+14155552671");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() =>
+      expect(mockedRegister).toHaveBeenCalledWith("user@example.com", "longenoughpassword", "+14155552671"),
+    );
+  });
+
+  it("shows the phone verification card after signup only when a phone number was actually given", async () => {
+    const user = userEvent.setup();
+    mockedRegister.mockResolvedValue({
+      userId: "u1",
+      email: "user@example.com",
+      role: "CUSTOMER",
+      emailVerified: false,
+      phoneVerified: false,
+    });
+    setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/confirm password/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/phone number/i), "+14155552671");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    await screen.findByText(/check your email/i);
+    expect(screen.getByText(/verify your phone number/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /send verification code/i })).toBeInTheDocument();
+  });
+
+  it("does not show any phone verification UI when the phone field was left blank", async () => {
+    const user = userEvent.setup();
+    mockedRegister.mockResolvedValue({
+      userId: "u1",
+      email: "user@example.com",
+      role: "CUSTOMER",
+      emailVerified: false,
+      phoneVerified: false,
+    });
+    setup();
+
+    await user.type(screen.getByLabelText(/email/i), "user@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "longenoughpassword");
+    await user.type(screen.getByLabelText(/confirm password/i), "longenoughpassword");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    await screen.findByText(/check your email/i);
+    expect(screen.queryByText(/verify your phone number/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /send verification code/i })).not.toBeInTheDocument();
+  });
+
   it("shows the duplicate-email message on 409 EMAIL_ALREADY_REGISTERED", async () => {
     const user = userEvent.setup();
     mockedRegister.mockRejectedValue(new ApiError(AuthErrorCode.EmailAlreadyRegistered, "backend message", 409));

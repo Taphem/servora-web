@@ -27,6 +27,14 @@ export function getAuthErrorMessage(error: unknown): string {
       return "This link is invalid or has expired.";
     case AuthErrorCode.RateLimited:
       return "Too many attempts. Please wait a moment and try again.";
+    case AuthErrorCode.PhoneAlreadyVerified:
+      return "Your phone number is already verified.";
+    case AuthErrorCode.OtpNotRequested:
+      return "That code has expired or was already used. Send a new one.";
+    case AuthErrorCode.OtpAttemptsExceeded:
+      return "Too many incorrect attempts. Send a new code and try again.";
+    case AuthErrorCode.OtpInvalid:
+      return "That code isn't right. Check it and try again.";
     case AuthErrorCode.DownstreamUnavailable:
     case AuthErrorCode.DownstreamTimeout:
     case AuthErrorCode.DownstreamNotConfigured:

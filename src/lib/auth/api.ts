@@ -19,10 +19,21 @@ import type { AuthUser, SessionResponse } from "@/lib/auth/types";
  *    "expired", and "already used" token states into one generic
  *    `TOKEN_INVALID` — the backend does not distinguish them, so this
  *    UI doesn't either.
+ *  - `phone` on register is optional and never echoed back by any
+ *    response (register/login/session all omit it — only the boolean
+ *    `phoneVerified` is exposed). There is no way to ask "does this
+ *    account have a phone on file" from session state alone; the only
+ *    reliable signal is the immediate register() call in the same
+ *    browser session, or a PHONE_NOT_SET response from the OTP-request
+ *    endpoint itself. See PhoneVerificationCard.
  */
 
-export function register(email: string, password: string): Promise<AuthUser> {
-  return apiRequest<AuthUser>("/api/v1/auth/register", { method: "POST", body: { email, password } });
+export function register(email: string, password: string, phone?: string): Promise<AuthUser> {
+  return apiRequest<AuthUser>("/api/v1/auth/register", {
+    method: "POST",
+    // Omit the property entirely when there's no phone — never send `phone: ""`.
+    body: phone ? { email, password, phone } : { email, password },
+  });
 }
 
 export function login(email: string, password: string): Promise<AuthUser> {
@@ -66,4 +77,29 @@ export function confirmPasswordReset(token: string, newPassword: string): Promis
     method: "POST",
     body: { token, newPassword },
   });
+}
+
+/**
+ * Requires an existing session — this is not a public/token-based flow
+ * like email verification. The body is deliberately an empty object: the
+ * backend derives the phone number from the authenticated user's stored
+ * account and rejects a `phone` key in the body with VALIDATION_FAILED.
+ * Never send a phone number here.
+ */
+export function requestPhoneOtp(): Promise<{ requested: true; expiresInSeconds: number }> {
+  return apiRequest<{ requested: true; expiresInSeconds: number }>("/api/v1/auth/phone/otp/request", {
+    method: "POST",
+    body: {},
+  });
+}
+
+/**
+ * Also requires an existing session. Unlike email verification, a
+ * successful call here does NOT log anyone in or return session/user
+ * fields — it only flips phoneVerifiedAt server-side. Callers must
+ * re-check the session (getSession/refresh) afterward to see
+ * phoneVerified: true reflected in the UI.
+ */
+export function verifyPhoneOtp(otp: string): Promise<{ verified: true }> {
+  return apiRequest<{ verified: true }>("/api/v1/auth/phone/otp/verify", { method: "POST", body: { otp } });
 }

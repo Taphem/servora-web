@@ -8,9 +8,16 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { register, resendVerificationEmail } from "@/lib/auth/api";
 import { getAuthErrorMessage } from "@/lib/auth/errorMessages";
+import { PhoneVerificationCard } from "@/components/auth/PhoneVerificationCard";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 10;
+// Mirrors servora-auth's own register schema exactly (schemas/auth.ts) —
+// leading "+", country code, 8-15 digits total. Kept in sync deliberately:
+// the backend stays authoritative and can still reject anything this
+// accepts, but there's no reason to let the browser round-trip on a
+// format the backend would reject anyway.
+const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
 
 interface SignupFormProps {
   onSwitchToLogin: () => void;
@@ -24,14 +31,17 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     password?: string;
     confirmPassword?: string;
+    phone?: string;
   }>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [registeredPhone, setRegisteredPhone] = useState<string | null>(null);
   // Synchronous guard against a second /register call — `loading` alone
   // only disables the button once React re-renders and commits, which
   // leaves a real window (double-click, a held/repeated Enter key, or
@@ -53,6 +63,11 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
 
     if (password && confirmPassword !== password) errors.confirmPassword = "Passwords don't match.";
 
+    // Phone is optional — only validate a value the user actually typed.
+    if (phone.trim() && !E164_PATTERN.test(phone.trim())) {
+      errors.phone = "Enter a phone number in international format, e.g. +14155552671.";
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -67,10 +82,17 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
     setFormError(null);
     if (!validate()) return;
 
+    const trimmedPhone = phone.trim();
+
     submittingRef.current = true;
     setLoading(true);
     try {
-      const user = await register(email.trim(), password);
+      // Omit the argument entirely when there's no phone, all the way
+      // from this call site down to the request body (see register() in
+      // api.ts) — never pass along an empty/undefined placeholder.
+      const user = trimmedPhone
+        ? await register(email.trim(), password, trimmedPhone)
+        : await register(email.trim(), password);
       // Registration logs the user in immediately (see src/lib/auth/api.ts)
       // — reflecting that here is accurate, not "pretending" they're
       // verified; emailVerified stays false until they act on the email.
@@ -79,6 +101,10 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
       // be a second, unnecessary network round trip.
       setUser(user);
       setRegisteredEmail(user.email);
+      // The register response never echoes the phone back (see api.ts) —
+      // this is the only moment the frontend can know one was given, so
+      // it's captured here rather than re-derived from session state later.
+      setRegisteredPhone(trimmedPhone || null);
     } catch (error) {
       setFormError(getAuthErrorMessage(error));
     } finally {
@@ -88,7 +114,7 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
   }
 
   if (registeredEmail) {
-    return <SignupSuccess email={registeredEmail} onDone={onDone} />;
+    return <SignupSuccess email={registeredEmail} phone={registeredPhone} onDone={onDone} />;
   }
 
   return (
@@ -136,6 +162,19 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
         disabled={loading}
       />
 
+      <Input
+        id="signup-phone"
+        type="tel"
+        label="Phone number (optional)"
+        autoComplete="tel"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        errorText={fieldErrors.phone}
+        helperText={fieldErrors.phone ? undefined : "International format with country code, e.g. +14155552671."}
+        disabled={loading}
+        placeholder="+14155552671"
+      />
+
       <Button type="submit" variant="primary" size="lg" loading={loading} className="mt-1 w-full">
         Create account
       </Button>
@@ -150,7 +189,7 @@ export function SignupForm({ onSwitchToLogin, onDone }: SignupFormProps) {
   );
 }
 
-function SignupSuccess({ email, onDone }: { email: string; onDone: () => void }) {
+function SignupSuccess({ email, phone, onDone }: { email: string; phone: string | null; onDone: () => void }) {
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
 
   async function handleResend() {
@@ -177,6 +216,8 @@ function SignupSuccess({ email, onDone }: { email: string; onDone: () => void })
           verify your account.
         </p>
       </div>
+
+      {phone ? <PhoneVerificationCard phone={phone} /> : null}
 
       <Button variant="primary" size="lg" onClick={onDone} className="mt-2 w-full">
         Done
