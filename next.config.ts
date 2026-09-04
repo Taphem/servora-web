@@ -25,6 +25,12 @@ const useStandaloneOutput = process.env.BUILD_STANDALONE === "true";
 // should ever hardcode or import it.
 const SERVICES_APP_ORIGIN = "https://servora-services-web.vercel.app";
 
+// Same architecture as SERVICES_APP_ORIGIN above, for the independently
+// deployed Provider Web app (mounted at /provider, NEXT_PUBLIC_BASE_PATH
+// set to match on its own side). Not read from NEXT_PUBLIC_SITE_URL, not
+// a new env var — see the comment above for why.
+const PROVIDER_APP_ORIGIN = "https://servora-provider-web-sandy.vercel.app";
+
 const nextConfig: NextConfig = {
   ...(useStandaloneOutput ? { output: "standalone" as const } : {}),
 
@@ -41,13 +47,14 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       // beforeFiles: matched before this app's own pages/public files are
-      // checked, so /services always reaches the services deployment
-      // regardless of anything this repo does or doesn't have at that
-      // path — the intent ("this prefix belongs to another app") stays
-      // unambiguous even as this repo grows. Every other route in this
-      // app (/, /verify-email, /_next/*, etc.) is untouched: none of them
-      // match a "/services..." source, so they fall through to this
-      // app's normal routing exactly as before.
+      // checked, so /services and /provider always reach their own
+      // deployments regardless of anything this repo does or doesn't
+      // have at those paths — the intent ("this prefix belongs to
+      // another app") stays unambiguous even as this repo grows. Every
+      // other route in this app (/, /verify-email, /_next/*, etc.) is
+      // untouched: none of them match a "/services..." or "/provider..."
+      // source, so they fall through to this app's normal routing
+      // exactly as before.
       beforeFiles: [
         {
           // The services app is served with assetPrefix: "/services", so
@@ -62,6 +69,20 @@ const nextConfig: NextConfig = {
         {
           source: "/services/:path*",
           destination: `${SERVICES_APP_ORIGIN}/services/:path*`,
+        },
+        {
+          // Provider Web, same reasoning as the /services rules above:
+          // it's served with NEXT_PUBLIC_BASE_PATH=/provider, so its own
+          // Next.js static assets already request /provider/_next/... —
+          // the wildcard rule proxies those along with everything else
+          // under /provider, with no separate /_next/* rule needed and
+          // no effect on this app's own bare /_next/* assets.
+          source: "/provider",
+          destination: `${PROVIDER_APP_ORIGIN}/provider`,
+        },
+        {
+          source: "/provider/:path*",
+          destination: `${PROVIDER_APP_ORIGIN}/provider/:path*`,
         },
       ],
     };
